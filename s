@@ -1,60 +1,118 @@
 
-import static org.mockito.Mockito.*;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import static org.mockito.Mockito.*;
 
 public class POSTMonitorTest {
-
-  @Mock
-  private Logger logger;
-
-  @Mock
-  private QueueServiceFactory queueServiceFactory;
-
-  @Mock
-  private MonitorStatusAlert monitorStatusAlert;
-
-  @Mock
-  private QueueService queueService;
-
-  @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
-    // Assign the static logger mock you created to the static Logger variable in POSTMonitor
-    POSTMonitor.m_Logger = logger;
-
-    // Mock the static QueueServiceFactory method to return your mock QueueService
-    when(queueServiceFactory.getQueueServiceInstance()).thenReturn(queueService);
-  }
-
-  @Test
-  public void testMain_successfulStart() throws Exception {
-    when(monitorStatusAlert.sendStatusMessage(any(), any(), any(), any(), any(), any())).thenReturn(true);
-
-    // Added for example purposes, your actual call might differ
-    when(queueService.start(any(), any())).thenReturn(true);
-
-    // Call the static main method - typically you would not do this for unit tests and would refactor to allow for better testability
-    POSTMonitor.main(new String[] { "path-to-config" });
-
-    // Verify that a success alert was sent once
-    verify(monitorStatusAlert).sendStatusMessage(...); // Fill in the appropriate parameters
-  }
-  
-  @Test
-  public void testMain_failureStart() throws Exception {
-    // Simulate a failure when starting QueueService
-    when(queueService.start(any(), any())).thenReturn(false);
     
-    // This should trigger the failure status message
-    POSTMonitor.main(new String[] { "path-to-config" });
-
-    // Verify that a failure alert was sent once
-    verify(monitorStatusAlert).sendStatusMessage(...); // Fill in the appropriate parameters
-  }
-
-  // Additional tests ...
+    @Mock
+    private HandlerManager handlerManager;
+    
+    @Mock
+    private NotificationThread notificationThread;
+    
+    @Mock
+    private POSTRetryThread postRetryThread;
+    
+    @Mock
+    private QManager qManager;
+    
+    @Mock
+    private QueueService queueService;
+    
+    @Mock
+    private MonitorStatusAlert monitorStatusAlert;
+    
+    @Before
+    public void setup() {
+        MockitoAnnotations.initMocks(this);
+    }
+    
+    @Test
+    public void testMainMethod() throws Exception {
+        // Mock the necessary objects and properties
+        
+        // Mock the properties
+        java.util.Properties props = new java.util.Properties();
+        props.setProperty("notify.gateway.log4j.reload.interval", "68000");
+        props.setProperty("notify.gateway.log4j.configuration", "/apps/ump-notify-processor/config/log4j.properties");
+        props.setProperty("log.encryption.enable", "1");
+        
+        // Mock the arguments
+        String[] args = new String[5];
+        args[0] = "config.properties";
+        args[2] = "1";
+        args[3] = "1";
+        args[4] = "-1";
+        
+        // Mock the method calls
+        
+        // NotifyUtil.loadConfigSet()
+        when(NotifyUtil.loadConfigSet(eq("config.properties"))).thenReturn(props);
+        
+        // NotifyDBConnector.createDataSource()
+        when(NotifyDBConnector.createDataSource(anyString(), any())).thenReturn(true);
+        
+        // HandlerManager.createInstance()
+        when(HandlerManager.createInstance(eq(props), eq(1))).thenReturn(handlerManager);
+        
+        // QManager.init()
+        when(qManager.init(eq(props))).thenReturn(true);
+        
+        // NotificationThread.init()
+        when(notificationThread.init(eq(props), eq(handlerManager), eq(1), eq(1), eq(-1))).thenReturn(true);
+        
+        // POSTRetryThread.init()
+        when(postRetryThread.init(eq(props), eq(1), eq(-1))).thenReturn(true);
+        
+        // QueueServiceFactory.getQueueServiceInstance()
+        when(QueueServiceFactory.getQueueServiceInstance()).thenReturn(queueService);
+        
+        // QueueService.start()
+        when(queueService.start(eq(qManager), any())).thenReturn(true);
+        
+        // MonitorStatusAlert.getInstance()
+        when(MonitorStatusAlert.getInstance(eq(props))).thenReturn(monitorStatusAlert);
+        
+        // MonitorStatusAlert.sendStatusMessage()
+        when(monitorStatusAlert.sendStatusMessage(anyInt(), anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(true);
+        
+        // Run the main method of POSTMonitor class
+        POSTMonitor.main(args);
+        
+        // Verify the method calls
+        
+        // NotifyUtil.loadConfigSet()
+        verify(NotifyUtil, times(1)).loadConfigSet(eq("config.properties"));
+        
+        // NotifyDBConnector.createDataSource()
+        verify(NotifyDBConnector, times(1)).createDataSource(anyString(), any());
+        
+        // HandlerManager.createInstance()
+        verify(HandlerManager, times(1)).createInstance(eq(props), eq(1));
+        
+        // QManager.init()
+        verify(qManager, times(1)).init(eq(props));
+        
+        // NotificationThread.init()
+        verify(notificationThread, times(1)).init(eq(props), eq(handlerManager), eq(1), eq(1), eq(-1));
+        
+        // POSTRetryThread.init()
+        verify(postRetryThread, times(1)).init(eq(props), eq(1), eq(-1));
+        
+        // QueueServiceFactory.getQueueServiceInstance()
+        verify(QueueServiceFactory, times(1)).getQueueServiceInstance();
+        
+        // QueueService.start()
+        verify(queueService, times(1)).start(eq(qManager), any());
+        
+        // MonitorStatusAlert.getInstance()
+        verify(MonitorStatusAlert, times(1)).getInstance(eq(props));
+        
+        // MonitorStatusAlert.sendStatusMessage()
+        verify(monitorStatusAlert, times(1)).sendStatusMessage(anyInt(), anyString(), anyString(), anyInt(), anyInt(), anyString());
+    }
+    
 }
